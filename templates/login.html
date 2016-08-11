@@ -1,0 +1,63 @@
+<head>
+<link href='http://fonts.googleapis.com/css?family=Roboto:400,300,700' rel='stylesheet' type='text/css'>
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+        <link rel=stylesheet type=text/css href="{{ url_for('static', filename='stylesLogin.css') }}">
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js">
+  </script>
+
+<script src="//apis.google.com/js/platform.js?onload=start"> </script>
+</head>
+
+  <div class="wrapper">
+    <div class="form-signin">
+        <form>
+            <h2 class="form-signin-heading">Sign In</h2>
+            <input type="text" class="form-control" name="username" placeholder="Email Address" required="" autofocus="" />
+            <input type="password" class="form-control" name="password" placeholder="Password" required=""/>
+            <br>
+            <button class="btn btn-lg btn-primary btn-block" type="submit">Login</button>
+        </form>
+      <br>
+      <p><span>or</span></p>
+      <h3 class="text-center">Sign In with</h3>
+        <div class="text-center gplus" id="signInButton">
+          <span class="g-signin"
+            data-scope="openid email"
+            data-clientid="598548887490-bdqph09trcoddtrqcojfkur1ck4acrpp.apps.googleusercontent.com"
+            data-redirecturi="postmessage"
+            data-accesstype="offline"
+            data-cookiepolicy="single_host_origin"
+            data-callback="signInCallback"
+            data-approvalprompt="force">
+          </span>
+      </div>
+  </div>
+</div>
+
+<div id="result"></div>
+
+<script>
+function signInCallback(authResult) {
+  if (authResult['code']) {
+    // Hide the sign-in button now that the user is authorized
+    $('#signinButton').attr('style', 'display: none');
+    // Send the one-time-use code to the server, if the server responds, write a 'login successful' message to the web page and then redirect back to the main restaurants page
+    $.ajax({
+      type: 'POST',
+      url: '/gconnect?state={{STATE}}',
+      processData: false,
+      data: authResult['code'],
+      contentType: 'application/octet-stream; charset=utf-8',
+      success: function(result) {
+        // Handle or verify the server response if necessary.
+        if (result) {
+          window.location.href = "/catalog";
+      } else if (authResult['error']) {
+    console.log('There was an error: ' + authResult['error']);
+  } else {
+        $('#result').html('Failed to make a server-side call. Check your configuration and console.');
+         }
+      }
+
+  }); } }
+</script>

@@ -1,11 +1,28 @@
 {% extends "main.html" %}
 {% block content %}
 
-{%if auth == 0%}
-    {% include "header.html" %}
-{%else%}
-    {% include "authHeader.html" %}
-{%endif%}
+
+
+<div class="row top-menu">
+    <div class="col-md-6">
+        <a href="{{url_for('showCategories')}}">
+            <span class="glyphicon glyphicon-home" aria-hidden="true"></span>Show All Categories
+        </a>
+    </div>
+    <div class="col-md-6 text-right">
+
+    {% if username == ""%}
+        <a href="/catalog/login"> Sign In</a>
+    {% else %}
+        <img src="{{picture}}"style = "width: 100px; height: 100px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;">
+        <br>
+        {{username}}
+    {% endif %}
+    </div>
+
+</div>
+
+<hr>
 
 <div class="row">
     <div class="col-md-12 text-center">

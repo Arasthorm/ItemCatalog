@@ -27,6 +27,17 @@ DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
 
+@app.route('/catalog/login')
+def login():
+    if 'username' in login_session:
+        return redirect(url_for('showCategories'))
+
+    state = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                    for x in xrange(32))
+    login_session['state'] = state
+    return render_template('login.html',STATE=state)
+
+
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
     # Validate state token
@@ -103,8 +114,6 @@ def gconnect():
     # ADD PROVIDER TO LOGIN SESSION
     login_session['provider'] = 'google'
 
-    with open('userdata.json', 'w') as outfile:
-    json.dump(data, outfile)
 
     # see if user exists, if it doesn't make a new one
     #user_id = getUserID(data["email"])
@@ -112,24 +121,14 @@ def gconnect():
     #    user_id = createUser(login_session)
     #login_session['user_id'] = user_id
 
-
     output = ''
-    output += '<h1>Welcome, '
-    output += login_session['username']
-    output += '!</h1>'
-    output += '<img src="'
-    output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-    flash("you are now logged in as %s" % login_session['username'])
-    print "done!"
 
-    return redirect(url_for('showCategories'))
-
+    return output
 
 
 
 @app.route('/catalog/<int:category_id>/item/JSON')
-def restaurantMenuJSON(category_id):
+def categoriesItemsJSON(category_id):
     category = session.query(Catalog).filter_by(id=category_id).one()
     items = session.query(CatalogItem).filter_by(
         catalog_id=category_id).all()
@@ -137,27 +136,30 @@ def restaurantMenuJSON(category_id):
 
 
 @app.route('/catalog/<int:category_id>/item/<int:item_id>/JSON')
-def menuItemJSON(category_id, item_id):
+def itemsJSON(category_id, item_id):
     Category_Item = session.query(CatalogItem).filter_by(id=item_id).one()
     return jsonify(Category_Item=Category_Item.serialize)
 
 
 @app.route('/catalog/JSON')
-def restaurantsJSON():
+def categoriesJSON():
     categories = session.query(Catalog).all()
     return jsonify(categories=[c.serialize for c in categories])
-
 
 
 # Show all categories
 @app.route('/')
 @app.route('/catalog/')
 def showCategories():
-    if login_session['username']:
-        auth = 1
+    username = ""
+    picture = ""
     categories = session.query(Catalog).all()
     items = session.query(CatalogItem).order_by(CatalogItem.id).limit(10)
-    return render_template('showCategories.html', categories=categories, items=items, auth=auth)
+    if 'username' in login_session:
+        username = login_session['username']
+        picture = login_session['picture']
+
+    return render_template('showCategories.html', categories=categories, items=items,username=username,picture=picture)
 
 @app.route('/catalog/new/',methods=['GET', 'POST'])
 def newCategory():
