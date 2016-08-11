@@ -1,0 +1,57 @@
+{% extends "main.html" %}
+{% block content %}
+
+{%if auth == 0%}
+    {% include "header.html" %}
+{%else%}
+    {% include "authHeader.html" %}
+{%endif%}
+
+<div class="row">
+    <div class="col-md-12 text-center">
+        <h1>Categories</h1>
+    </div>
+</div>
+
+<div class = 'flash'>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+
+        <ul>
+        {% for message in messages %}
+            <li> <strong> {{ message }} </strong> </li>
+        {% endfor %}
+        </ul>
+        {% endif %}
+    {% endwith %}
+
+</div>
+
+
+<div class="col-md-10 padding-none">
+    <a href="{{url_for('newCategory')}}">
+        <button class="btn btn-default">
+            <span class="glyphicon glyphicon-tags" aria-hidden="true"></span>Add Category
+        </button>
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+    {% for cat in categories %}
+    <hr>
+    <a href = "{{url_for('showItems', catalog_id = cat.id)}}">
+
+        <h2 class="text-center">{{cat.name}}</h2>
+
+    </a>
+    <hr>
+    {% endfor %}
+
+    </div>
+
+</div>
+
+
+
+{% endblock %}
