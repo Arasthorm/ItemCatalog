@@ -41,12 +41,12 @@ def login():
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
     # Validate state token
-    '''
-    if request.args.get('state') != login_session['state']:
-        response = make_response(json.dumps('Invalid state parameter.'), 401)
-        response.headers['Content-Type'] = 'application/json'
-        return response
-    '''
+
+ #   if request.args.get('state') != login_session['state']:
+ #       response = make_response(json.dumps('Invalid state parameter.'), 401)
+ #       response.headers['Content-Type'] = 'application/json'
+ #       return response
+
     # Obtain authorization code
     code = request.data
 
@@ -121,7 +121,7 @@ def gconnect():
     #    user_id = createUser(login_session)
     #login_session['user_id'] = user_id
 
-    output = ''
+    output = 'Done!'
 
     return output
 
@@ -163,6 +163,8 @@ def showCategories():
 
 @app.route('/catalog/new/',methods=['GET', 'POST'])
 def newCategory():
+    username = ""
+    picture = ""
     if request.method == 'POST':
         if request.form['name']:
             newCategory = Catalog(name=request.form['name'])
@@ -171,10 +173,15 @@ def newCategory():
             flash('New Category %s Successfully Created' % (newCategory.name))
             return redirect(url_for('showCategories'))
     else:
-        return render_template('insertCategory.html');
+        if 'username' in login_session:
+            username = login_session['username']
+            picture = login_session['picture']
+        return render_template('insertCategory.html',username=username,picture=picture);
 
 @app.route('/catalog/<int:catalog_id>/edit/', methods=['GET','POST'])
 def editCategory(catalog_id):
+    username = ""
+    picture = ""
     categoryToEdit = session.query(Catalog).filter_by(id=catalog_id).one()
     if request.method == 'POST':
         if request.form['name']:
@@ -184,12 +191,18 @@ def editCategory(catalog_id):
             flash('Category %s Successfully Edited' % (categoryToEdit.name))
             return redirect(url_for('showCategories'))
     else:
-        return render_template('editCategory.html',category=categoryToEdit)
+        if 'username' in login_session:
+            username = login_session['username']
+            picture = login_session['picture']
+
+        return render_template('editCategory.html',category=categoryToEdit,username=username,picture=picture)
 
 
 
 @app.route('/catalog/<int:catalog_id>/delete/', methods=['GET','POST'])
 def deleteCategory(catalog_id):
+    username = ""
+    picture = ""
     categoryToDelete = session.query(Catalog).filter_by(id=catalog_id).one()
     if request.method == 'POST':
         session.delete(categoryToDelete)
@@ -197,18 +210,29 @@ def deleteCategory(catalog_id):
         flash('Category %s Successfully Deleted' % (categoryToDelete.name))
         return redirect(url_for('showCategories'))
     else:
-        return render_template("deleteCategory.html",category=categoryToDelete)
+        if 'username' in login_session:
+            username = login_session['username']
+            picture = login_session['picture']
+        return render_template("deleteCategory.html",category=categoryToDelete,username=username,picture=picture)
 
 
 @app.route('/catalog/<int:catalog_id>/', methods=['GET','POST'])
 def showItems(catalog_id):
+    username = ""
+    picture = ""
     category = session.query(Catalog).filter_by(id=catalog_id).one()
     items = session.query(CatalogItem).filter_by(catalog_id=catalog_id).all()
-    return render_template("showItems.html",items=items,category=category,n=len(items))
+
+    if 'username' in login_session:
+        username = login_session['username']
+        picture = login_session['picture']
+    return render_template("showItems.html",items=items,category=category,n=len(items),username=username,picture=picture)
 
 
 @app.route('/catalog/<int:catalog_id>/item/new/', methods=['GET','POST'])
 def newItem(catalog_id):
+    username = ""
+    picture = ""
     category = session.query(Catalog).filter_by(id=catalog_id).one()
     if request.method == 'POST':
         if request.form['name']:
@@ -220,11 +244,16 @@ def newItem(catalog_id):
             flash('Item %s Successfully created' % (newItem.name))
         return redirect(url_for('showItems',catalog_id=catalog_id))
     else:
-        return render_template("insertItem.html",category=category)
+        if 'username' in login_session:
+            username = login_session['username']
+            picture = login_session['picture']
+        return render_template("insertItem.html",category=category,username=username,picture=picture)
 
 
 @app.route('/catalog/<int:catalog_id>/item/<int:item_id>/edit', methods=['GET','POST'])
 def editItem(catalog_id,item_id):
+    username = ""
+    picture = ""
     category = session.query(Catalog).filter_by(id=catalog_id).one()
     itemToEdit = session.query(CatalogItem).filter_by(id=item_id).one()
     if request.method == 'POST':
@@ -237,12 +266,17 @@ def editItem(catalog_id,item_id):
         flash('Item %s Successfully editted' % (itemToEdit.name))
         return redirect(url_for('showItems',catalog_id=catalog_id))
     else:
-        return render_template('editItem.html',item=itemToEdit,category=category)
+        if 'username' in login_session:
+            username = login_session['username']
+            picture = login_session['picture']
+        return render_template('editItem.html',item=itemToEdit,category=category,username=username,picture=picture)
 
 
 
 @app.route('/catalog/<int:catalog_id>/item/<int:item_id>/delete', methods=['GET','POST'])
 def deleteItem(catalog_id,item_id):
+    username = ""
+    picture = ""
     category = session.query(Catalog).filter_by(id=catalog_id).one()
     itemToDelete = session.query(CatalogItem).filter_by(id=item_id).one()
     if request.method == 'POST':
@@ -251,7 +285,10 @@ def deleteItem(catalog_id,item_id):
         flash('Item %s Successfully Deleted' % (itemToDelete.name))
         return redirect(url_for('showItems',catalog_id=catalog_id))
     else:
-        return render_template('deleteItem.html',item=itemToDelete,category=category)
+        if 'username' in login_session:
+            username = login_session['username']
+            picture = login_session['picture']
+        return render_template('deleteItem.html',item=itemToDelete,category=category,username=username,picture=picture)
 
 
 
