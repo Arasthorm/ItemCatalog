@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database_setup import Catalog, Base, CatalogItem
+from database_setup import Catalog, Base, CatalogItem, User
 
 engine = create_engine('sqlite:///catalogitem.db')
 # Bind the engine to the metadata of the Base class so that the
@@ -18,45 +18,73 @@ DBSession = sessionmaker(bind=engine)
 # session.rollback()
 session = DBSession()
 
+#Users
+user1 = user()
 
 
-#Menu for UrbanBurger
-category1 = Catalog(name = "Food")
+
+
+# Menu for UrbanBurger
+category1 = Catalog(name="Food", user=1)
 
 session.add(category1)
 session.commit()
 
 
-catalogItem1 = CatalogItem(name = "French Fries", description = "with garlic and parmesan", catalog = category1)
+catalogItem1 = CatalogItem(
+    name="French Fries",
+    description="with garlic and parmesan",
+    catalog=category1,user=1)
 
 session.add(catalogItem1)
 session.commit()
 
-catalogItem2 = CatalogItem(name = "Chicken Burger", description = "Juicy grilled chicken patty with tomato mayo and lettuce", catalog = category1)
+catalogItem2 = CatalogItem(
+    name="Chicken Burger",
+    description="Juicy grilled chicken patty with tomato mayo and lettuce",
+    catalog=category1,user=1)
 
 session.add(catalogItem2)
 session.commit()
 
-catalogItem3 = CatalogItem(name = "Chocolate Cake", description = "fresh baked and served with ice cream", catalog = category1)
+catalogItem3 = CatalogItem(
+    name="Chocolate Cake",
+    description="fresh baked and served with ice cream",
+    catalog=category1,user=)
 
 session.add(catalogItem3)
 session.commit()
 
 
-
-#Menu for Super Stir Fry
-category2 = Catalog(name = "Sports")
+# Menu for Super Stir Fry
+category2 = Catalog(name="Sports", user=2)
 
 session.add(category2)
 session.commit()
 
 
-categoryItem1 = CatalogItem(name = "Football", description = "Boring", catalog = category2)
+categoryItem1 = CatalogItem(
+    name="Football", description="Boring", catalog=category2, user=2)
 
 session.add(categoryItem1)
 session.commit()
 
-categoryItem2 = CatalogItem(name = "Baseball", description = " Boring++", catalog= category2)
+categoryItem2 = CatalogItem(
+    name="Baseball", description=" Boring++", catalog=category2, user=1)
 
 session.add(categoryItem2)
+session.commit()
+
+
+categoryItem3 = CatalogItem(
+    name="Hockey", description=" Boring++", catalog=category2, user=2)
+
+session.add(categoryItem3)
+session.commit()
+
+
+categoryItem4 = CatalogItem(
+    name="Tennis", description=" Boring++", catalog=category2, user=2)
+
+session.add(categoryItem4)
 session.commit()

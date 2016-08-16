@@ -47,7 +47,7 @@
 
 </div>
 
-
+{% if username != "" %}
 <div class="col-md-10 padding-none">
     <a href="{{url_for('newCategory')}}">
         <button class="btn btn-default">
@@ -55,16 +55,21 @@
         </button>
     </a>
 </div>
+{%endif%}
 
 <div class="row">
     <div class="col-md-12">
-    {% for cat in categories %}
+    {% for i in range(0,n) %}
     <hr>
-    <a href = "{{url_for('showItems', catalog_id = cat.id)}}">
+    <div class="text-center">
+        <a href = "{{url_for('showItems', catalog_id = categories[i].id)}}">
 
-        <h2 class="text-center">{{cat.name}}</h2>
+            <h2>{{categories[i].name}}</h2>
 
-    </a>
+        </a>
+            ({{users[i].name}})
+    </div>
+
     <hr>
     {% endfor %}
 

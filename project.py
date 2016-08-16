@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, jsonify, url_for, flash
 from sqlalchemy import create_engine, asc
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, Catalog, CatalogItem
+from database_setup import Base, Catalog, CatalogItem,User
 from flask import session as login_session
 import random
 import string
@@ -20,12 +20,12 @@ APPLICATION_NAME = "Catalog app"
 auth = 0
 
 # Connect to Database and create database session
-engine = create_engine('sqlite:///catalogitem.db')
+engine = create_engine('sqlite:///catalogItemWithUsers.db')
 Base.metadata.bind = engine
 
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
-'''
+
 def createUser(login_session):
     newUser = User(name=login_session['username'], email=login_session[
                    'email'], picture=login_session['picture'])
@@ -46,7 +46,7 @@ def getUserID(email):
         return user.id
     except:
         return None
-'''
+
 
 @app.route('/catalog/login')
 def login():
@@ -139,10 +139,10 @@ def gconnect():
 
 
     # see if user exists, if it doesn't make a new one
-   # user_id = getUserID(data["email"])
-    #if not user_id:
-    #    user_id = createUser(login_session)
-    #login_session['user_id'] = user_id
+    user_id = getUserID(data["email"])
+    if not user_id:
+        user_id = createUser(login_session)
+    login_session['user_id'] = user_id
     flash('You are now logged in as %s' % (login_session['username']))
     output = 'Done!'
 
@@ -172,6 +172,7 @@ def gdisconnect():
         return response
     else:
         login_session.clear()
+        flash('You have successfully logged out')
         return redirect(url_for('showCategories'))
 
 
@@ -199,32 +200,39 @@ def categoriesJSON():
 @app.route('/')
 @app.route('/catalog/')
 def showCategories():
+
+    users = []
     username = ""
     picture = ""
     categories = session.query(Catalog).all()
-    items = session.query(CatalogItem).order_by(CatalogItem.id).limit(10)
+
+    for cat in categories:
+        users.append(getUserInfo(cat.user_id))
+
     if 'username' in login_session:
         username = login_session['username']
         picture = login_session['picture']
 
-    return render_template('showCategories.html', categories=categories, items=items,username=username,picture=picture)
+    return render_template('showCategories.html', categories=categories,
+        users=users,username=username,picture=picture,n=len(users))
 
 @app.route('/catalog/new/',methods=['GET', 'POST'])
 def newCategory():
     username = ""
     picture = ""
     if request.method == 'POST':
-        if request.form['name']:
-            newCategory = Catalog(name=request.form['name'])
+        if request.form['name'] and 'username' in login_session:
+            newCategory = Catalog(name=request.form['name'],user_id=login_session['user_id'])
             session.add(newCategory)
             session.commit()
             flash('New Category %s Successfully Created' % (newCategory.name))
-            return redirect(url_for('showCategories'))
+        return redirect(url_for('showCategories'))
     else:
         if 'username' in login_session:
             username = login_session['username']
             picture = login_session['picture']
-        return render_template('insertCategory.html',username=username,picture=picture);
+            return render_template('insertCategory.html',username=username,picture=picture);
+        return redirect(url_for('showCategories'))
 
 @app.route('/catalog/<int:catalog_id>/edit/', methods=['GET','POST'])
 def editCategory(catalog_id):
@@ -232,18 +240,20 @@ def editCategory(catalog_id):
     picture = ""
     categoryToEdit = session.query(Catalog).filter_by(id=catalog_id).one()
     if request.method == 'POST':
-        if request.form['name']:
-            categoryToEdit.name = request.form['name']
-            session.add(categoryToEdit)
-            session.commit()
-            flash('Category %s Successfully Edited' % (categoryToEdit.name))
-            return redirect(url_for('showCategories'))
-    else:
         if 'username' in login_session:
+            if login_session['user_id'] == categoryToEdit.user_id:
+                if request.form['name']:
+                    categoryToEdit.name = request.form['name']
+                    session.add(categoryToEdit)
+                    session.commit()
+                    flash('Category %s Successfully Edited' % (categoryToEdit.name))
+        return redirect(url_for('showCategories'))
+    else:
+        if 'username' in login_session and login_session['user_id'] == categoryToEdit.user_id:
             username = login_session['username']
             picture = login_session['picture']
-
-        return render_template('editCategory.html',category=categoryToEdit,username=username,picture=picture)
+            return render_template('editCategory.html',category=categoryToEdit,username=username,picture=picture)
+        return redirect(url_for('showCategories'))
 
 
 
@@ -253,15 +263,17 @@ def deleteCategory(catalog_id):
     picture = ""
     categoryToDelete = session.query(Catalog).filter_by(id=catalog_id).one()
     if request.method == 'POST':
-        session.delete(categoryToDelete)
-        session.commit()
-        flash('Category %s Successfully Deleted' % (categoryToDelete.name))
+        if login_session['user_id'] == categoryToDelete.user_id:
+            session.delete(categoryToDelete)
+            session.commit()
+            flash('Category %s Successfully Deleted' % (categoryToDelete.name))
         return redirect(url_for('showCategories'))
     else:
-        if 'username' in login_session:
+        if 'username' in login_session and login_session['user_id'] == categoryToDelete.user_id:
             username = login_session['username']
             picture = login_session['picture']
-        return render_template("deleteCategory.html",category=categoryToDelete,username=username,picture=picture)
+            return render_template("deleteCategory.html",category=categoryToDelete,username=username,picture=picture)
+        return redirect(url_for('showCategories'))
 
 
 @app.route('/catalog/<int:catalog_id>/', methods=['GET','POST'])
@@ -283,20 +295,22 @@ def newItem(catalog_id):
     picture = ""
     category = session.query(Catalog).filter_by(id=catalog_id).one()
     if request.method == 'POST':
-        if request.form['name']:
-            newItem = CatalogItem(name=request.form['name'],
-                               description=request.form['description'],
-                               catalog_id = catalog_id)
-            session.add(newItem)
-            session.commit()
-            flash('Item %s Successfully created' % (newItem.name))
+        if 'username' in login_session:
+            if request.form['name']:
+                newItem = CatalogItem(name=request.form['name'],
+                                description=request.form['description'],
+                                catalog_id = catalog_id,
+                                user_id=login_session['user_id'])
+                session.add(newItem)
+                session.commit()
+                flash('Item %s Successfully created' % (newItem.name))
         return redirect(url_for('showItems',catalog_id=catalog_id))
     else:
         if 'username' in login_session:
             username = login_session['username']
             picture = login_session['picture']
-        return render_template("insertItem.html",category=category,username=username,picture=picture)
-
+            return render_template("insertItem.html",category=category,username=username,picture=picture)
+        return redirect(url_for('showItems',catalog_id=catalog_id))
 
 @app.route('/catalog/<int:catalog_id>/item/<int:item_id>/edit', methods=['GET','POST'])
 def editItem(catalog_id,item_id):
@@ -305,20 +319,21 @@ def editItem(catalog_id,item_id):
     category = session.query(Catalog).filter_by(id=catalog_id).one()
     itemToEdit = session.query(CatalogItem).filter_by(id=item_id).one()
     if request.method == 'POST':
-        if request.form['name']:
-            itemToEdit.name = request.form['name']
-        if request.form['description']:
-            itemToEdit.description = request.form['description']
-        session.add(itemToEdit)
-        session.commit()
-        flash('Item %s Successfully editted' % (itemToEdit.name))
+        if login_session['user_id'] == itemToEdit.user_id:
+            if request.form['description']:
+                itemToEdit.description = request.form['description']
+            if request.form['name']:
+                itemToEdit.name = request.form['name']
+                session.add(itemToEdit)
+                session.commit()
+                flash('Item %s Successfully editted' % (itemToEdit.name))
         return redirect(url_for('showItems',catalog_id=catalog_id))
     else:
-        if 'username' in login_session:
+        if 'username' in login_session and login_session['user_id'] == itemToEdit.user_id:
             username = login_session['username']
             picture = login_session['picture']
-        return render_template('editItem.html',item=itemToEdit,category=category,username=username,picture=picture)
-
+            return render_template('editItem.html',item=itemToEdit,category=category,username=username,picture=picture)
+        return redirect(url_for('showItems',catalog_id=catalog_id))
 
 
 @app.route('/catalog/<int:catalog_id>/item/<int:item_id>/delete', methods=['GET','POST'])
@@ -328,16 +343,17 @@ def deleteItem(catalog_id,item_id):
     category = session.query(Catalog).filter_by(id=catalog_id).one()
     itemToDelete = session.query(CatalogItem).filter_by(id=item_id).one()
     if request.method == 'POST':
-        session.delete(itemToDelete)
-        session.commit()
-        flash('Item %s Successfully Deleted' % (itemToDelete.name))
+        if login_session['user_id'] == itemToDelete.user_id:
+            session.delete(itemToDelete)
+            session.commit()
+            flash('Item %s Successfully Deleted' % (itemToDelete.name))
         return redirect(url_for('showItems',catalog_id=catalog_id))
     else:
-        if 'username' in login_session:
+        if 'username' in login_session and login_session['user_id'] == itemToDelete.user_id:
             username = login_session['username']
             picture = login_session['picture']
-        return render_template('deleteItem.html',item=itemToDelete,category=category,username=username,picture=picture)
-
+            return render_template('deleteItem.html',item=itemToDelete,category=category,username=username,picture=picture)
+        return redirect(url_for('showItems',catalog_id=catalog_id))
 
 
 if __name__ == '__main__':
