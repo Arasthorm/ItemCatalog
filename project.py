@@ -25,7 +25,28 @@ Base.metadata.bind = engine
 
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
+'''
+def createUser(login_session):
+    newUser = User(name=login_session['username'], email=login_session[
+                   'email'], picture=login_session['picture'])
+    session.add(newUser)
+    session.commit()
+    user = session.query(User).filter_by(email=login_session['email']).one()
+    return user.id
 
+
+def getUserInfo(user_id):
+    user = session.query(User).filter_by(id=user_id).one()
+    return user
+
+
+def getUserID(email):
+    try:
+        user = session.query(User).filter_by(email=email).one()
+        return user.id
+    except:
+        return None
+'''
 
 @app.route('/catalog/login')
 def login():
@@ -42,10 +63,10 @@ def login():
 def gconnect():
     # Validate state token
 
- #   if request.args.get('state') != login_session['state']:
- #       response = make_response(json.dumps('Invalid state parameter.'), 401)
- #       response.headers['Content-Type'] = 'application/json'
- #       return response
+    if request.args.get('state') != login_session['state']:
+        response = make_response(json.dumps('Invalid state parameter.'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
 
     # Obtain authorization code
     code = request.data
@@ -90,6 +111,7 @@ def gconnect():
         return response
 
     stored_credentials = login_session.get('credentials')
+    print stored_credentials
     stored_gplus_id = login_session.get('gplus_id')
     if stored_credentials is not None and gplus_id == stored_gplus_id:
         response = make_response(json.dumps('Current user is already connected.'),
@@ -98,6 +120,7 @@ def gconnect():
         return response
 
     # Store the access token in the session for later use.
+    login_session['credentials'] = credentials
     login_session['access_token'] = credentials.access_token
     login_session['gplus_id'] = gplus_id
 
@@ -116,15 +139,40 @@ def gconnect():
 
 
     # see if user exists, if it doesn't make a new one
-    #user_id = getUserID(data["email"])
+   # user_id = getUserID(data["email"])
     #if not user_id:
     #    user_id = createUser(login_session)
     #login_session['user_id'] = user_id
-
+    flash('You are now logged in as %s' % (login_session['username']))
     output = 'Done!'
 
     return output
 
+
+@app.route('/gdisconnect')
+def gdisconnect():
+    # Only disconnect a connected user.
+    credentials = login_session.get('credentials')
+    if credentials is None:
+        response = make_response(
+            json.dumps('Current user not connected.'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    access_token = credentials.access_token
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % access_token
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[0]
+    print result['status']
+    if result['status'] != '200':
+        print "No result?"
+        # For whatever reason, the given token was invalid.
+        response = make_response(
+            json.dumps('Failed to revoke token for given user.', 400))
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    else:
+        login_session.clear()
+        return redirect(url_for('showCategories'))
 
 
 @app.route('/catalog/<int:category_id>/item/JSON')
